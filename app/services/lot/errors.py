@@ -1,11 +1,11 @@
 class AuctionError(Exception):
-    """Базовий клас для помилок аукціону"""
+    """Base auction error class"""
     pass
 
 class AuctionEndedError(AuctionError):
-    """Виникає, коли ставка ставиться на закритий лот"""
+    """Bidding on closed lot"""
     pass
 
 class AuctionBidTooLowError(AuctionError):
-    """Виникає, коли ставка ставиться на закритий лот"""
+    """Bidding value is too low to update lot"""
     pass
