@@ -25,7 +25,7 @@ class Lot:
         self._bid_step = bid_step
 
         self._start_time = datetime.now()
-        self._end_time = self._start_time + timedelta(self._lifeduration)
+        self._end_time = self._start_time + timedelta(seconds=self._lifeduration)
 
         self._is_closed = False
 
@@ -64,8 +64,8 @@ class Lot:
         """
         self._auction_logger.info(f"Updated price of {self._id} lot. Old price : {self._current_price }, new = {new_val}")
         self._current_price = new_val
+
         #update lifetime
-        #TODO Ps. very high bid difference (in %) can have short lifetime
         now = datetime.now()
         self._end_time = now + timedelta(seconds=self._lifeduration_on_update)
 
@@ -73,6 +73,8 @@ class Lot:
 
     def check_status(self) -> LotStatus:
         """Calculate status and close lot is ran out of time"""
+        self._auction_logger.debug(f"Checking lot id={self._id}, end time={self._end_time}")
+
         if self._is_closed or datetime.now() >= self._end_time:
             self._auction_logger.info(f"Updated lot {self._id} to be closed")
             self._is_closed = True

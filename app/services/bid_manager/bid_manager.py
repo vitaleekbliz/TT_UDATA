@@ -3,6 +3,7 @@ from app.services.lot.lot import Lot
 from app.services.lot.status import LotStatus
 from app.core.logger.logger import AppLogger
 import logging
+import time
 from app.services.bid_manager.errors import *
 from app.core.config.config import app_logger_settings, auction_settings
 
@@ -65,7 +66,6 @@ class BidManager:
         for lot in self.lots.values():
             if(lot.check_status() == LotStatus.RUNNING):
                 active_lots.append(lot)
-
         
         self._bid_manager_loger.info(f"Found {len(active_lots)} active lots out of {len(self.lots)}")
 
@@ -75,10 +75,43 @@ class BidManager:
 #TODO remove debug main function
 if __name__ == "__main__":
     print("=== Starting BidManager Testing ===\n")
+    
+    # 1. Перевірка Singleton
     a = BidManager()
     b = BidManager()
-    a.create_lot()
-    a.create_lot()
-    b.create_lot()
-    print(len(b.get_active_lots()))
-    print(a is b)
+    
+    print(f"Is 'a' the same instance as 'b'? {a is b}")  # Має бути True
+    print(f"Manager A ID: {id(a)}")
+    print(f"Manager B ID: {id(b)}\n")
+
+    # 2. Створення лотів через різні змінні
+    # Використовуємо значення з вашого AuctionSettings
+    a.create_lot(
+        starting_price=100
+    )
+    a.create_lot(
+        starting_price=50
+    )
+    b.create_lot(
+        starting_price=200
+    )
+
+    # 3. Перевірка кількості та ID
+    active_lots = b.get_active_lots()
+    print(f"Total active lots in 'b': {len(active_lots)}") # Має бути 3
+    
+    print("\n--- Current Lots State ---")
+    for lot in active_lots:
+        # Перевіряємо, чи ID збільшуються: 1, 2, 3
+        print(f"Lot ID: {lot.get_id()} | Price: {lot._current_price}")
+
+    # 4. Тест автоматичного завершення (через ваші 3 секунди в конфігу)
+    print(f"\nWaiting {auction_settings.START_LIFE_DURATION + 2} seconds for lots to expire...")
+    time.sleep(auction_settings.START_LIFE_DURATION -  1 )
+    a.bid_on_lot(2, 1000)
+    time.sleep(auction_settings.START_LIFE_DURATION - 1)
+    #a.bid_on_lot(5, 100)
+    #Called error
+    
+    print(f"Active lots after sleep: {len(b.get_active_lots())}") # Має бути 0
+    print("=== BidManager Testing Finished ===")
