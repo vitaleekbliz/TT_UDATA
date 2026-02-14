@@ -2,51 +2,20 @@ from fastapi import FastAPI
 import httpx
 from fastapi.testclient import TestClient
 import asyncio
+import uvicorn
 
 from app.api.routers.lots.lots_endpoints import router as lots_router
+from app.api.routers.lots.lots_ws import router as ws_router
 
 app = FastAPI(title="Auction API")
 app.include_router(lots_router) 
+app.include_router(ws_router) 
 
 @app.get("/")
 async def root():
     return {"status": "ok"}
 
-# --- БЛОК ТЕСТУВАННЯ ---
+#TODO remove testing
 if __name__ == "__main__":
-    print("=== Starting API Integration Tests ===\n")
-    
-    # Створюємо клієнт для тестування
-    with TestClient(app) as client:
-        
-        # 1. Тест: Створення лота (POST /lots/)
-        print("Test 1: Creating a new lot...")
-        # Оскільки у вашому коді create_lot не приймає body, шлемо пустий POST
-        response = client.post("/lots/")
-        print(f"Status: {response.status_code}")
-        print(f"Response: {response.json()}")
-        
-        if response.status_code == 201:
-            lot_id = response.json().get("id")
-            
-            # 2. Тест: Отримання списку активних лотів (GET /lots/)
-            print("\nTest 2: Listing active lots...")
-            list_res = client.get("/lots/")
-            print(f"Active lots count: {len(list_res.json())}")
-
-            # 3. Тест: Ставка на лот (POST /lots/{id}/bids)
-            print(f"\nTest 3: Placing a bid on lot {lot_id}...")
-            # Передаємо суму згідно з вашою схемою BidRequest
-            bid_payload = {"amount": 150, "name": "Dmitro"} 
-            bid_res = client.post(f"/lots/{lot_id}/bids", json=bid_payload)
-            print(f"Status: {bid_res.status_code}")
-            print(f"Response: {bid_res.json()}")
-
-            # 4. Тест: Занизька ставка (Очікуємо 400 Error)
-            print("\nTest 4: Placing a low bid (Should fail)...")
-            low_bid_payload = {"amount": 10, "name":"Vasia"}
-            bad_res = client.post(f"/lots/{lot_id}/bids", json=low_bid_payload)
-            print(f"Status: {bad_res.status_code} (Expected 400)")
-            print(f"Detail: {bad_res.json().get('detail')}")
-
-    print("\n=== All Integration Tests Completed ===")
+    # Запуск сервера для ручного тестування через Swagger або Postman
+    uvicorn.run("app.api.main:app", host="127.0.0.1", port=8000)

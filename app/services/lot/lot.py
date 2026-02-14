@@ -41,7 +41,7 @@ class Lot:
         )
 
 
-    def get_id(self):
+    def get_id(self) -> int:
         return self._id
     
     def get_lot_response_model(self) -> LotResponse:
@@ -77,6 +77,10 @@ class Lot:
         self._current_price = new_val
 
         #update lifetime
+        #TODO fix if this behavior is not intended
+        # currently placing bed makes lot lifetime shorter, equal to update_lifeduration even if its higher then 
+        # Lot lifetime = 30 (start_lifedur) -> place bet -> lifetime drops to 10 (_lifeduration_on_update)
+        #Ps. Good for this TT testing; 
         now = datetime.now()
         self._end_time = now + timedelta(seconds=self._lifeduration_on_update)
 

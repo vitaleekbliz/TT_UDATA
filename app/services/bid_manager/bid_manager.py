@@ -20,13 +20,14 @@ class BidManager:
         return cls._instance
 
     def __init__(self):
-        # Виконуємо код лише якщо він ще не запускався
+        # Run once
         if self._initialized:
             return
         
+        self._bid_manager_loger.info("Created bid manager instance")
+
         #TODO create active lots and closed lots arrays
         self.lots: Dict[int, Lot] = {}
-        self._bid_manager_loger.info("Created bid manager instance")
 
         self._initialized = True
 
@@ -44,14 +45,9 @@ class BidManager:
         """Creates a lot and returns its unique ID."""
         self._bid_manager_loger.info("Creating lot")
 
-        #USED config for values
-        # start_lifeduration = auction_settings.START_LIFE_DURATION
-        # lifeduration_on_update = auction_settings.UPDATE_LIFE_DURATION
-        # bid_step = auction_settings.MIN_BID_INCREMENT
-
         new_lot = Lot(starting_price, start_lifeduration, lifeduration_on_update, bid_step)
         self.lots[new_lot.get_id()] = new_lot
-        
+
         return new_lot.get_lot_response_model()
 
     async def bid_on_lot(self, lot_id: int, amount: int) -> bool:

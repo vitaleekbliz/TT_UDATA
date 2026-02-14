@@ -2,8 +2,8 @@ from pydantic_settings import BaseSettings
 import logging
 
 class AuctionSettings(BaseSettings):
-    START_LIFE_DURATION: int = 3
-    UPDATE_LIFE_DURATION: int = 3
+    START_LIFE_DURATION: int = 30
+    UPDATE_LIFE_DURATION: int = 10
     MIN_BID_INCREMENT: int = 10
 
 class AppLoggerSettings(BaseSettings):
