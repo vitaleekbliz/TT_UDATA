@@ -6,7 +6,7 @@ import logging
 import time
 from app.services.bid_manager.errors import *
 from app.core.config.config import app_logger_settings
-from app.api.routers.models.models_lots_endpoints import LotResponse
+from app.api.routers.lots.models.models_lots_endpoints import LotResponse
 
 
 class BidManager:
@@ -40,7 +40,7 @@ class BidManager:
         return lot.get_lot_response_model()
         
 
-    async def create_lot(self, starting_price: int = 10, start_lifeduration:int = 30, lifeduration_on_update:int = 10, bid_step:int = 5) -> int:
+    async def create_lot(self, starting_price: int = 10, start_lifeduration:int = 30, lifeduration_on_update:int = 10, bid_step:int = 5) -> LotResponse:
         """Creates a lot and returns its unique ID."""
         self._bid_manager_loger.info("Creating lot")
 
@@ -50,9 +50,9 @@ class BidManager:
         # bid_step = auction_settings.MIN_BID_INCREMENT
 
         new_lot = Lot(starting_price, start_lifeduration, lifeduration_on_update, bid_step)
-        lot_id = new_lot.get_id()
-        self.lots[lot_id] = new_lot
-        return lot_id
+        self.lots[new_lot.get_id()] = new_lot
+        
+        return new_lot.get_lot_response_model()
 
     async def bid_on_lot(self, lot_id: int, amount: int) -> bool:
         """

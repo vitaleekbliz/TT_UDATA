@@ -5,7 +5,7 @@ import time
 from typing import List
 from app.core.logger.logger import AppLogger
 from app.core.config.config import app_logger_settings
-from app.api.routers.models.models_lots_endpoints import LotResponse
+from app.api.routers.lots.models.models_lots_endpoints import LotResponse
 
 class Lot:
     _id_counter = 1
