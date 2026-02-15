@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List
 
 class LotResponse(BaseModel):
     id: int

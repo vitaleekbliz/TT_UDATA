@@ -1,18 +1,15 @@
-from typing import Dict, List, Optional
+from typing import Dict, List
 from app.services.lot.lot import Lot
 from app.services.lot.status import LotStatus
 from app.core.logger.logger import AppLogger
-import logging
-import time
 from app.services.bid_manager.errors import *
 from app.core.config.config import app_logger_settings
 from app.api.routers.lots.models.models_lots_endpoints import LotResponse
 import asyncio
-from datetime import datetime
 
 
 class BidManager:
-    _bid_manager_loger = AppLogger("BIDMANAGER", "bid_manager.log", app_logger_settings.LEVEL).get_instance()
+    _bid_manager_loger = AppLogger("BIDMANAGER", "bid_manager.log", app_logger_settings.FILE_LEVEL).get_instance()
     _instance = None
     _monitor_task = None
 
@@ -30,7 +27,7 @@ class BidManager:
         
         self._bid_manager_loger.info("Created bid manager instance")
 
-        #TODO create active lots and closed lots arrays
+        #TODO create closed lots arrays for non active lots
         # Right way would be to remove lot when its finished and insert it to database
         self._active_lots: Dict[int, Lot] = {}
 
@@ -47,24 +44,26 @@ class BidManager:
     async def _background_monitor(self):
         """Background task for closing lots"""
         self._bid_manager_loger.info("BidManager: Background monitor started.")
+        #TODO create another class "LotScheduleChecker" to avoid circular dependancy
+        # best way to solve this is to pass callback funtion to call WSLotManager when lot is closed to close all connections on lot
+        #crutch here
         from app.api.routers.lots.lots_ws import WSLotManager
 
         try:
             while True:
 
-                lots_to_close = [
-                    lot for lot in self._active_lots.values() 
+                lot_ids_to_close = [
+                    lot.get_id() for lot in self._active_lots.values() 
                     if lot.check_status() != LotStatus.RUNNING
                 ]
 
-                for lot in lots_to_close:
-                    self._bid_manager_loger.info(f"Monitor: Closing expired lot {lot.get_id()}")
-                    #TODO remove lot from dictionary 
-                    #create function
-                    self._close_lot(lot.get_id())
+                for lot_id in lot_ids_to_close:
+                    self._bid_manager_loger.info(f"Monitor: Closing expired lot {lot_id}")
+
+                    self._close_lot(lot_id)
 
                     # Close client connection to lot
-                    await WSLotManager().close_lot_connections(lot.get_id())
+                    await WSLotManager().close_lot_connections(lot_id)
 
                 await asyncio.sleep(1)
 
@@ -83,6 +82,10 @@ class BidManager:
             # Save to DB
         else:
             self._bid_manager_loger.warning(f"Attempted to close lot {lot_id}, but it was already removed.")
+
+        #Delete lot if needed
+        # Caution. Lot after closing can have other statuses : Pending payment...
+        # Check app.services.lot.status for that
 
 
 
@@ -136,48 +139,3 @@ class BidManager:
         #return [lot for lot in self._active_lots.values() if lot.check_status() == LotStatus.RUNNING]
 
         return active_lots
-
-
-#TODO remove debug main function
-if __name__ == "__main__":
-    print("=== Starting BidManager Testing ===\n")
-    
-    # 1. Перевірка Singleton
-    a = BidManager()
-    b = BidManager()
-    
-    print(f"Is 'a' the same instance as 'b'? {a is b}")  # Має бути True
-    print(f"Manager A ID: {id(a)}")
-    print(f"Manager B ID: {id(b)}\n")
-
-    # 2. Створення лотів через різні змінні
-    # Використовуємо значення з вашого AuctionSettings
-    a.create_lot(
-        starting_price=100
-    )
-    a.create_lot(
-        starting_price=50
-    )
-    b.create_lot(
-        starting_price=200
-    )
-
-    # 3. Перевірка кількості та ID
-    active_lots = b.get_active_lots()
-    print(f"Total active lots in 'b': {len(active_lots)}") # Має бути 3
-    
-    print("\n--- Current Lots State ---")
-    for lot in active_lots:
-        # Перевіряємо, чи ID збільшуються: 1, 2, 3
-        print(f"Lot ID: {lot.get_id()} | Price: {lot._current_price}")
-
-    # 4. Тест автоматичного завершення (через ваші 3 секунди в конфігу)
-    print(f"\nWaiting {auction_settings.START_LIFE_DURATION + 2} seconds for lots to expire...")
-    time.sleep(auction_settings.START_LIFE_DURATION -  1 )
-    a.bid_on_lot(2, 1000)
-    time.sleep(auction_settings.START_LIFE_DURATION - 1)
-    #a.bid_on_lot(5, 100)
-    #Called error
-    
-    print(f"Active lots after sleep: {len(b.get_active_lots())}") # Має бути 0
-    print("=== BidManager Testing Finished ===")

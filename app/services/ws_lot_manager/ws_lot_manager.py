@@ -6,7 +6,7 @@ from app.api.routers.lots.models.models_ws_lot import BidPlacedMessage
 
 
 class WSLotManager:
-    _ws_lot_manager_loger = AppLogger("WSLOTMANAGER", "sw_lot_manager.log", app_logger_settings.LEVEL).get_instance()
+    _ws_lot_manager_loger = AppLogger("WSLOTMANAGER", "sw_lot_manager.log", app_logger_settings.FILE_LEVEL).get_instance()
     _instance = None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -29,7 +29,6 @@ class WSLotManager:
 
     async def connect(self, lot_id: int, websocket: WebSocket):
         await websocket.accept()
-        #TODO test if server should do memory clean ups 
         if lot_id not in self._active_connections:
             self._active_connections[lot_id] = []
 

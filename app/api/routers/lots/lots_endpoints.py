@@ -9,7 +9,7 @@ from app.core.config.config import app_logger_settings, auction_settings
 from app.api.routers.lots.models.models_lots_endpoints import LotResponse, BidRequest
 from typing import List
 
-lot_endpoint_logger = AppLogger("LOTS_ENDPOINT", "lots_endpoint.log", app_logger_settings.LEVEL).get_instance()
+lot_endpoint_logger = AppLogger("LOTS_ENDPOINT", "lots_endpoint.log", app_logger_settings.FILE_LEVEL).get_instance()
 router = APIRouter(prefix="/lots", tags=["Lots"])
 
 # Return managers (Singleton)

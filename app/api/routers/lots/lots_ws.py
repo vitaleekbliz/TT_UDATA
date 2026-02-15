@@ -1,12 +1,11 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status
 from app.services.ws_lot_manager.ws_lot_manager import WSLotManager
 from app.services.bid_manager.bid_manager import BidManager
-from app.api.routers.lots.models.models_lots_endpoints import LotResponse
 from app.core.logger.logger import AppLogger
 from app.core.config.config import app_logger_settings
 
 router = APIRouter(prefix="/ws/lots", tags=["WebSocket"])
-ws_logger = AppLogger("WS_ENDPOINT", "ws_lot.log", app_logger_settings.LEVEL).get_instance()
+ws_logger = AppLogger("WS_ENDPOINT", "ws_lot.log", app_logger_settings.FILE_LEVEL).get_instance()
 
 async def get_ws_lot_manager() -> WSLotManager:
     return WSLotManager()

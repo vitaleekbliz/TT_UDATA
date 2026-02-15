@@ -1,0 +1,8 @@
+services:
+  ttudata:
+    image: ttudata
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 8000:8000

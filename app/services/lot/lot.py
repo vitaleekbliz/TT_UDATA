@@ -1,15 +1,13 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from app.services.lot.errors import *
 from app.services.lot.status import LotStatus
-import time
-from typing import List
 from app.core.logger.logger import AppLogger
 from app.core.config.config import app_logger_settings
 from app.api.routers.lots.models.models_lots_endpoints import LotResponse
 
 class Lot:
     _id_counter = 1
-    _auction_logger = AppLogger("AUCTION", "auction.log", app_logger_settings.LEVEL).get_instance()
+    _auction_logger = AppLogger("AUCTION", "auction.log", app_logger_settings.FILE_LEVEL).get_instance()
     #TODO create array for bid history
 
     def __init__(self, starting_price: int = 10, start_lifeduration:int = 5, lifeduration_on_update:int = 5, bid_step:int = 5):
@@ -96,37 +94,3 @@ class Lot:
             return LotStatus.ENDED
         
         return LotStatus.RUNNING
-
-
-#TODO remove debuf main func
-if __name__ == "__main__":
-    print("=== Starting Lot Testing ===\n")
-
-    # 1. Тест ініціалізації та лічильника ID
-    lot1 = Lot(starting_price=100, start_lifeduration=3, bid_step=5) # Лот на 3 секунди
-    lot2 = Lot(starting_price=200)
-    print(f"Lot 1 ID: {lot1._id} (Expected: 1)")
-    print(f"Lot 2 ID: {lot2._id} (Expected: 2)")
-
-    # 2. Тест успішної ставки
-    print("\n--- Testing Successful Bid ---")
-    print(f"Current Price: {lot1._current_price}")
-    lot1.bid(110) # Успішно (110 > 100 + 5)
-    
-    # 3. Тест занадто низької ставки
-    print("\n--- Testing Low Bid ---")
-    print("Successful")
-    #lot1.bid(112) # Має бути помилка (112 < 110 + 5)
-
-    # 4. Тест закінчення часу
-    print("\n--- Testing Expiration (waiting 3 seconds) ---")
-    time.sleep(3)
-    print(f"Lot 1 Status: {lot1.check_status() == LotStatus.RUNNING}")
-    print("\n--- Testing Expiration (waiting 3 seconds) ---")
-    time.sleep(7)
-    print(f"Lot 1 Status: {lot1.check_status() == LotStatus.RUNNING}")
-    
-    # 5. Спроба ставки на закритий лот
-    lot1.bid(500)
-
-    print("\n=== Testing Complete ===")
