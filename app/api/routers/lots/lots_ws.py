@@ -6,11 +6,11 @@ from app.core.logger.logger import AppLogger
 from app.core.config.config import app_logger_settings
 
 router = APIRouter(prefix="/ws/lots", tags=["WebSocket"])
-ws_logger = AppLogger("WS_ENDPOINT", "ws.log", app_logger_settings.LEVEL).get_instance()
+ws_logger = AppLogger("WS_ENDPOINT", "ws_lot.log", app_logger_settings.LEVEL).get_instance()
 
-def get_ws_lot_manager() -> WSLotManager:
+async def get_ws_lot_manager() -> WSLotManager:
     return WSLotManager()
-def get_bid_manager() -> BidManager:
+async def get_bid_manager() -> BidManager:
     return BidManager()
 
 @router.websocket("/{lot_id}")
@@ -35,5 +35,5 @@ async def websocket_endpoint(
             # Listen to clint if needed
             await websocket.receive_text()
     except WebSocketDisconnect:
-        ws_manager.disconnect(lot_id, websocket)
+        await ws_manager.disconnect(lot_id, websocket)
         ws_logger.info(f"Client disconnected from lot {lot_id}")

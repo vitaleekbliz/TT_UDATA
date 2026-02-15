@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from app.services.bid_manager.bid_manager import BidManager
+from app.services.bid_manager.errors import *
+from app.services.lot.errors import *
 from app.services.ws_lot_manager.ws_lot_manager import WSLotManager
 from app.api.routers.lots.models.models_ws_lot import BidPlacedMessage
 from app.core.logger.logger import AppLogger
@@ -11,9 +13,9 @@ lot_endpoint_logger = AppLogger("LOTS_ENDPOINT", "lots_endpoint.log", app_logger
 router = APIRouter(prefix="/lots", tags=["Lots"])
 
 # Return managers (Singleton)
-def get_ws_lot_manager() -> WSLotManager:
+async def get_ws_lot_manager() -> WSLotManager:
     return WSLotManager()
-def get_bid_manager() -> BidManager:
+async def get_bid_manager() -> BidManager:
     return BidManager()
 
 @router.post("/", response_model=LotResponse, status_code=status.HTTP_201_CREATED)
@@ -53,7 +55,7 @@ async def list_active_lots(manager: BidManager = Depends(get_bid_manager)):
 async def place_bid(lot_id: int, bid_data: BidRequest, bid_manager: BidManager = Depends(get_bid_manager), ws_lot_manager: WSLotManager = Depends(get_ws_lot_manager)):
     try:
         await bid_manager.bid_on_lot(lot_id, bid_data.amount)
-        
+
         #TODO add message model to broadcast
         message = BidPlacedMessage(
             lot_id=lot_id,
@@ -64,6 +66,14 @@ async def place_bid(lot_id: int, bid_data: BidRequest, bid_manager: BidManager =
         await ws_lot_manager.broadcast_to_lot(lot_id, message)
 
         return {"message": "Bid placed successfully"}
+    except AuctionError as e:
+        lot_endpoint_logger.warning(f"API: Failed bid on {lot_id}: {str(e)}")
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+    
+    except BidManagerError as e:
+        lot_endpoint_logger.warning(f"API: Failed bid on {lot_id}: {str(e)}")
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+    
     except Exception as e:
         lot_endpoint_logger.warning(f"API: Failed bid on {lot_id}: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))

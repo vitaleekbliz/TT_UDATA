@@ -7,11 +7,15 @@ import time
 from app.services.bid_manager.errors import *
 from app.core.config.config import app_logger_settings
 from app.api.routers.lots.models.models_lots_endpoints import LotResponse
+import asyncio
+from datetime import datetime
 
 
 class BidManager:
     _bid_manager_loger = AppLogger("BIDMANAGER", "bid_manager.log", app_logger_settings.LEVEL).get_instance()
     _instance = None
+    _monitor_task = None
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             # Create the object only if it doesn't exist
@@ -27,12 +31,63 @@ class BidManager:
         self._bid_manager_loger.info("Created bid manager instance")
 
         #TODO create active lots and closed lots arrays
-        self.lots: Dict[int, Lot] = {}
+        # Right way would be to remove lot when its finished and insert it to database
+        self._active_lots: Dict[int, Lot] = {}
+
+        # Launch monitor
+        if self._monitor_task is None:
+            self._monitor_task = asyncio.create_task(self._background_monitor())
 
         self._initialized = True
 
+    def stop_monitor(self):
+        if self._monitor_task:
+            self._monitor_task.cancel()
+
+    async def _background_monitor(self):
+        """Background task for closing lots"""
+        self._bid_manager_loger.info("BidManager: Background monitor started.")
+        from app.api.routers.lots.lots_ws import WSLotManager
+
+        try:
+            while True:
+
+                lots_to_close = [
+                    lot for lot in self._active_lots.values() 
+                    if lot.check_status() != LotStatus.RUNNING
+                ]
+
+                for lot in lots_to_close:
+                    self._bid_manager_loger.info(f"Monitor: Closing expired lot {lot.get_id()}")
+                    #TODO remove lot from dictionary 
+                    #create function
+                    self._close_lot(lot.get_id())
+
+                    # Close client connection to lot
+                    await WSLotManager().close_lot_connections(lot.get_id())
+
+                await asyncio.sleep(1)
+
+        except asyncio.CancelledError:
+            self._bid_manager_loger.info("Monitor: Background task cancelled.")
+        except Exception as e:
+            self._bid_manager_loger.error(f"Monitor: Error in background task: {e}")
+
+
+    def _close_lot(self, lot_id: int):
+        # Return none if lot not found in active lots
+        lot = self._active_lots.pop(lot_id, None)
+
+        if lot:
+            self._bid_manager_loger.info(f"Lot {lot_id} successfully closed and removed.")
+            # Save to DB
+        else:
+            self._bid_manager_loger.warning(f"Attempted to close lot {lot_id}, but it was already removed.")
+
+
+
     async def get_lot_response_model(self, lot_id: int)->LotResponse:
-        lot = self.lots.get(lot_id)
+        lot = self._active_lots.get(lot_id)
 
         if(not lot):
             self._bid_manager_loger.error(f"Error: Lot {lot_id} not found.")
@@ -46,7 +101,7 @@ class BidManager:
         self._bid_manager_loger.info("Creating lot")
 
         new_lot = Lot(starting_price, start_lifeduration, lifeduration_on_update, bid_step)
-        self.lots[new_lot.get_id()] = new_lot
+        self._active_lots[new_lot.get_id()] = new_lot
 
         return new_lot.get_lot_response_model()
 
@@ -55,7 +110,7 @@ class BidManager:
         Logic for placing a bid. 
         Returns True if successful, raises error or returns False if not.
         """
-        lot = self.lots.get(lot_id)
+        lot = self._active_lots.get(lot_id)
         
         if not lot:
             self._bid_manager_loger.error(f"Error: Lot {lot_id} not found.")
@@ -71,14 +126,14 @@ class BidManager:
         active_lots: List[LotResponse] = []
 
         #append running lots 
-        for lot in self.lots.values():
+        for lot in self._active_lots.values():
             if(lot.check_status() == LotStatus.RUNNING):
                 active_lots.append(lot.get_lot_response_model())
         
-        self._bid_manager_loger.info(f"Found {len(active_lots)} active lots out of {len(self.lots)}")
+        self._bid_manager_loger.info(f"Found {len(active_lots)} active lots out of {len(self._active_lots)}")
 
         #I dont like python one lines xD
-        #return [lot for lot in self.lots.values() if lot.check_status() == LotStatus.RUNNING]
+        #return [lot for lot in self._active_lots.values() if lot.check_status() == LotStatus.RUNNING]
 
         return active_lots
 

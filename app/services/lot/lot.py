@@ -63,7 +63,7 @@ class Lot:
             self._auction_logger.error(f"Lot {self._id} is closed at {self._end_time}")
             raise AuctionEndedError(f"Auction ended at {self._end_time}")
         
-        if(new_bid <= self._current_price + self._bid_step):
+        if(new_bid < self._current_price + self._bid_step):
             self._auction_logger.error(f"Bid {new_bid} is too low lot id = {self._id}, price = {self._current_price}, step = {self._bid_step}")
             raise AuctionBidTooLowError(f"Auction price : {self._current_price}, step : {self._bid_step}; current bid price : {new_bid}")
 
